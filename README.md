@@ -1,0 +1,3 @@
+# GritGirls
+
+Frontend: Vite + React
