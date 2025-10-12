@@ -1,5 +1,19 @@
-# Node
+# Node / React
 client/node_modules/
+client/dist/
+client/.env
+client/.env.*.local
 
-# Mac
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# DB & env
+dev.db
+.env
+*.sqlite3
+
+# OS/editor
 .DS_Store
+.vscode/
