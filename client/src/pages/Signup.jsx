@@ -4,8 +4,9 @@ import { useAuth } from "../auth/AuthContext.jsx";
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
-export default function Login() {
-  const { setAuth } = useAuth();  
+
+export default function Signup() {
+  const { setAuth } = useAuth();
   const nav = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,17 +18,18 @@ export default function Login() {
     setErr("");
     try {
       setSaving(true);
-      const res = await fetch(`${API}/api/auth/login`, {
+      const res = await fetch(`${API}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Login failed");
-
-      // Update context (this re-renders the navbar immediately)
+      if (!res.ok) throw new Error(data.error || "Signup failed");
+      // store token + email
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("userEmail", data.user.email);
       setAuth({ token: data.access_token, userEmail: data.user.email });
-      nav("/");
+      nav("/"); // go home
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -37,15 +39,24 @@ export default function Login() {
 
   return (
     <div>
-      <h2>Login</h2>
+      <h2>Create your account</h2>
       <form onSubmit={onSubmit} className="card" style={{ display: "grid", gap: 8, maxWidth: 360 }}>
         {err && <div style={{ color: "crimson" }}>{err}</div>}
-        <input placeholder="Email" value={email} onChange={(e)=>setEmail(e.target.value)} />
-        <input placeholder="Password" type="password" value={password} onChange={(e)=>setPassword(e.target.value)} />
-        <button type="submit" disabled={saving}>{saving ? "Logging in…" : "Log in"}</button>
+        <input
+          placeholder="Email"
+          value={email}
+          onChange={(e)=>setEmail(e.target.value)}
+        />
+        <input
+          placeholder="Password"
+          type="password"
+          value={password}
+          onChange={(e)=>setPassword(e.target.value)}
+        />
+        <button type="submit" disabled={saving}>{saving ? "Signing up…" : "Sign up"}</button>
       </form>
       <p style={{ marginTop: 8 }}>
-        Don’t have an account? <Link to="/signup">Sign up</Link>
+        Already have an account? <Link to="/login">Log in</Link>
       </p>
     </div>
   );

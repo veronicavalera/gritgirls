@@ -6,11 +6,10 @@ import Home from "./pages/Home.jsx";
 import Bikes from "./pages/Bikes.jsx";
 import Rides from "./pages/Rides.jsx";
 import Profile from "./pages/Profile.jsx";
-import "./index.css";
 import Login from "./pages/Login.jsx";
-
-
-
+import Signup from "./pages/Signup.jsx"; 
+import { AuthProvider } from "./auth/AuthContext.jsx"; 
+import "./index.css";
 
 const router = createBrowserRouter([
   {
@@ -22,12 +21,15 @@ const router = createBrowserRouter([
       { path: "rides", element: <Rides /> },
       { path: "profile", element: <Profile /> },
       { path: "login", element: <Login /> },
+      { path: "signup", element: <Signup /> },
     ],
   },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   </React.StrictMode>
 );

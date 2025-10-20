@@ -1,13 +1,8 @@
 import { NavLink, Outlet, Link } from "react-router-dom";
+import { useAuth } from "./auth/AuthContext.jsx";
 
 export default function App() {
-  const email = localStorage.getItem("userEmail");
-
-  function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userEmail");
-    window.location.href = "/"; // simple refresh to update nav
-  }
+  const { userEmail, logout } = useAuth();
 
   return (
     <div className="app">
@@ -29,11 +24,10 @@ export default function App() {
           </NavLink>
         </nav>
 
-        {/* Auth area (right side) */}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-          {email ? (
+          {userEmail ? (
             <>
-              <span style={{ fontSize: 14, opacity: 0.8 }}>{email}</span>
+              <span style={{ fontSize: 14, opacity: 0.8 }}>{userEmail}</span>
               <button onClick={logout}>Logout</button>
             </>
           ) : (
@@ -48,9 +42,7 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="footer">
-        © {new Date().getFullYear()} GritGirls
-      </footer>
+      <footer className="footer">© {new Date().getFullYear()} GritGirls</footer>
     </div>
   );
 }
