@@ -2,6 +2,8 @@ from pathlib import Path
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
+import os
 
 db = SQLAlchemy()
 
@@ -26,10 +28,16 @@ def create_app():
 
     db.init_app(app)
 
+    # JWT secret (dev fallback if env not set)
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-insecure-change-me")
+    jwt = JWTManager(app)
+
     with app.app_context():
         from . import models  # so that SQLAlchemy knows the tables
         db.create_all()
         from .routes import api_bp
         app.register_blueprint(api_bp, url_prefix="/api")
+        from .auth import auth_bp
+        app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
     return app

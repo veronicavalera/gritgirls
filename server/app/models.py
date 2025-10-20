@@ -1,6 +1,9 @@
 from datetime import datetime
 from . import db
 
+from werkzeug.security import generate_password_hash, check_password_hash
+
+
 # schema for your data; how bikes are stored
 class Bike(db.Model):
     __tablename__ = "bikes"
@@ -30,4 +33,20 @@ class Bike(db.Model):
             "zip_prefix": self.zip_prefix,
             "created_at": self.created_at.isoformat(),
         }
+    
+class User(db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def set_password(self, raw: str):
+        self.password_hash = generate_password_hash(raw)
+
+    def check_password(self, raw: str) -> bool:
+        return check_password_hash(self.password_hash, raw)
+
+    def to_dict(self):
+        return {"id": self.id, "email": self.email, "created_at": self.created_at.isoformat()}
 

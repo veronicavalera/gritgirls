@@ -7,6 +7,10 @@ import Bikes from "./pages/Bikes.jsx";
 import Rides from "./pages/Rides.jsx";
 import Profile from "./pages/Profile.jsx";
 import "./index.css";
+import Login from "./pages/Login.jsx";
+
+
+
 
 const router = createBrowserRouter([
   {
@@ -17,6 +21,7 @@ const router = createBrowserRouter([
       { path: "bikes", element: <Bikes /> },
       { path: "rides", element: <Rides /> },
       { path: "profile", element: <Profile /> },
+      { path: "login", element: <Login /> },
     ],
   },
 ]);
