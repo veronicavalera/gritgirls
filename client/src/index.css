@@ -88,3 +88,52 @@ img {
   height: auto;
   display: block;
 }
+
+/* quick layout helpers */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 640px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 1024px) {
+  .grid-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .grid-cards { grid-template-columns: 1fr; }
+}
+
+.card.form-card { margin-bottom: 16px; }
+
+.bike-card__header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.bike-card__title { margin: 0; font-size: 18px; }
+.bike-card__price { margin-left: auto; font-weight: 700; }
+
+.bike-card__meta {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.error {
+  background: #ffe8e8;
+  color: #8a1f1f;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #f3c1c1;
+}
