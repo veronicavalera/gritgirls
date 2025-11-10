@@ -5,6 +5,7 @@ import App from "./App.jsx";
 import Home from "./pages/Home.jsx";
 import Bikes from "./pages/Bikes.jsx";
 import Rides from "./pages/Rides.jsx";
+import BikeDetail from "./pages/BikeDetail.jsx";
 import Profile from "./pages/Profile.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx"; 
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       { index: true, element: <Home /> },
+      { path: "bikes/:id", element: <BikeDetail /> },
       { path: "bikes", element: <Bikes /> },
       { path: "rides", element: <Rides /> },
       { path: "profile", element: <Profile /> },

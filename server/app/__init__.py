@@ -16,10 +16,20 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+    # NEW: uploads directory (e.g., gritgirls/uploads)
+    UPLOAD_DIR = BASE_DIR / "uploads"
+    UPLOAD_DIR.mkdir(exist_ok=True, parents=True)
+    app.config["UPLOAD_DIR"] = str(UPLOAD_DIR)
+
     # allows react dev site to call api
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+            "origins": [
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "http://localhost:5174",
+                "http://127.0.0.1:5174",
+            ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": False,
@@ -37,6 +47,10 @@ def create_app():
         db.create_all()
         from .routes import api_bp
         app.register_blueprint(api_bp, url_prefix="/api")
+        # NEW: files blueprint
+        from .uploads import files_bp
+        app.register_blueprint(files_bp, url_prefix="/api")
+
         from .auth import auth_bp
         app.register_blueprint(auth_bp, url_prefix="/api/auth")
 

@@ -1,3 +1,4 @@
+// client/App.jsx
 import { NavLink, Outlet, Link } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext.jsx";
 
@@ -7,7 +8,9 @@ export default function App() {
   return (
     <div className="app">
       <header className="header" style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <h1 style={{ fontSize: 30, margin: 0 }}>Grit Girls</h1>
+        <Link to="/" style={{ textDecoration: "none", color: "inherit" }}>
+          <h1 style={{ fontSize: 30, margin: 0 }}>GritGirls</h1>
+        </Link>
 
         <nav className="nav" style={{ display: "flex", gap: 12 }}>
           <NavLink to="/" className={({ isActive }) => `link ${isActive ? "active" : ""}`} end>
@@ -31,15 +34,17 @@ export default function App() {
               <button onClick={logout}>Logout</button>
             </>
           ) : (
-            <Link className="link" to="/login">Login</Link>
+            <>
+              <Link className="link" to="/login">Login</Link>
+              <Link className="link" to="/signup">Signup</Link>
+            </>
           )}
         </div>
       </header>
 
+      {/* Let each page control its own cards/sections */}
       <main className="main">
-        <div className="card">
-          <Outlet />
-        </div>
+        <Outlet />
       </main>
 
       <footer className="footer">© {new Date().getFullYear()} GritGirls</footer>
