@@ -275,3 +275,37 @@ a.link:hover { text-decoration: underline; }
 .hero-actions .hero-cta.ui-btn[data-variant="soft"]:hover {
   background: #e6eaff;                   /* a touch darker on hover */
 }
+
+/* --- Image frames: consistent boxes without cropping --- */
+.img-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;           /* tidy card/thumb shape; change to 16/9 if you prefer */
+  background: var(--ui-neutral); /* light gray “letterbox” */
+  border-radius: 10px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.img-fit {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;           /* <— key: no cropping */
+  image-rendering: auto;
+}
+
+/* Detail page: taller frame for hero image */
+.img-frame--detail {
+  aspect-ratio: auto;
+  height: min(70vh, 560px);      /* responsive hero height cap */
+  background: var(--ui-neutral);
+  border-radius: 12px;
+}
+
+/* Small upload preview tiles */
+.img-frame--tile {
+  aspect-ratio: 1 / 1;
+  width: 160px;
+  background: var(--ui-neutral);
+}

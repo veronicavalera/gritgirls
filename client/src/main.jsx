@@ -1,4 +1,3 @@
-// client/main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
@@ -10,6 +9,7 @@ import Home from "./pages/Home.jsx";
 import Bikes from "./pages/Bikes.jsx";
 import BikesNew from "./pages/BikesNew.jsx";
 import BikeDetail from "./pages/BikeDetail.jsx";
+import BikesEdit from "./pages/BikesEdit.jsx";
 
 // Rides
 import Rides from "./pages/Rides.jsx";
@@ -38,6 +38,7 @@ const router = createBrowserRouter([
       { path: "bikes", element: <Bikes /> },
       { path: "bikes/new", element: <BikesNew /> },
       { path: "bikes/:id", element: <BikeDetail /> },
+      { path: "bikes/:id/edit", element: <BikesEdit /> }, // <- single canonical edit route
 
       // Rides
       { path: "rides", element: <Rides /> },

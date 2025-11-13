@@ -1,6 +1,8 @@
-from datetime import datetime
 from . import db
 from sqlalchemy import UniqueConstraint
+from datetime import datetime, timedelta
+from sqlalchemy.dialects.sqlite import JSON
+
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -66,6 +68,7 @@ class Bike(db.Model):
     size = db.Column(db.String(20))          # free-text label (e.g., S/M/52)
     price_usd = db.Column(db.Integer)
     state = db.Column(db.String(2))          # e.g., "NJ"
+    
 
     # DETAILS fields (detail view page)
     wheel_size = db.Column(db.String(20))
