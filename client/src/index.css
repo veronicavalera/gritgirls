@@ -1,123 +1,277 @@
-:root{
-  --bg: #f7f9fc;
-  --panel: #ffffff;
-  --panel-2: #f4f6fb;
-  --text: #0f172a;
-  --muted: #5b6475;
-  --brand: #3b82f6;
-  --brand-2: #2563eb;
-  --border: #e5e7eb;
-  --ring: rgba(59,130,246,0.25);
-  --success: #10b981;
-  --danger: #ef4444;
-  --radius: 14px;
-  --shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
-  --shadow-soft: 0 4px 18px rgba(16,24,40,0.06);
+/* ===== GritGirls Light Theme ===== */
+
+/* 1) Color system & spacing */
+:root {
+  --bg: #f8fafc;                 /* page background */
+  --surface: #ffffff;            /* cards, panels */
+  --surface-2: #f2f5f9;          /* subtle fills */
+  --text: #0f172a;               /* primary text (slate-900) */
+  --muted: #64748b;              /* secondary text (slate-500) */
+  --border: #e2e8f0;             /* soft borders */
+  --ring: #c7d2fe;               /* focus ring */
+  --accent: #e879f9;             /* soft magenta accent */
+  --accent-2: #22d3ee;           /* cyan accent for small details */
+  --danger: #ef4444;             /* errors */
+  --success: #10b981;            /* success */
+
+  --radius: 16px;                /* rounded corners */
+  --radius-sm: 12px;
+  --shadow: 0 6px 24px rgba(2, 6, 23, 0.06), 0 2px 8px rgba(2, 6, 23, 0.04);
+
+  --space-1: 6px;
+  --space-2: 10px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 40px;
+
+  --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
+/* 2) Base */
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
-
 body {
   margin: 0;
-  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  background: var(--bg);               /* <-- light background only */
+  font-family: var(--font);
   color: var(--text);
+  background: linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a { color: var(--brand); text-decoration: none; }
-a:hover { text-decoration: underline; }
+a { color: inherit; }
 
-.app { min-height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
+/* 3) App layout */
+.app {
+  min-height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
 
-/* Header / Nav */
-.header{
-  position: sticky; top: 0; z-index: 20;
-  display: flex; align-items: center; gap: 18px;
-  padding: 14px 22px;
-  background: rgba(255,255,255,0.85);  /* light, slightly translucent */
-  backdrop-filter: blur(6px);
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: saturate(140%) blur(6px);
+  background: rgba(255, 255, 255, 0.8);
   border-bottom: 1px solid var(--border);
+  padding: 12px var(--space-4);
 }
-.header h1 { font-size: 22px; letter-spacing: 0.3px; margin: 0; }
-.nav { display: flex; gap: 14px; }
-.link {
-  color: var(--muted); padding: 8px 10px; border-radius: 10px; transition: 120ms ease;
+
+.main {
+  max-width: 1100px;
+  padding: var(--space-4);
+  margin: 0 auto;
+  width: 100%;
 }
-.link:hover   { color: var(--text); background: #eef2ff; text-decoration: none; }
-.link.active  { color: var(--text); background: #e7efff; }
 
-/* Main area */
-.main { max-width: 1100px; margin: 24px auto; padding: 0 20px; }
+.footer {
+  padding: var(--space-3) var(--space-4);
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
 
-/* Cards */
-.card{
-  background: var(--panel);
+/* 4) Typography */
+h1, h2, h3 {
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--space-2) 0;
+}
+h1 { font-size: clamp(26px, 3.4vw, 34px); }
+h2 { font-size: clamp(20px, 2.5vw, 26px); }
+h3 { font-size: 18px; }
+
+/* 5) Nav */
+.nav .link {
+  padding: 8px 12px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--muted);
+  border: 1px solid transparent;
+}
+.nav .link:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.nav .link.active {
+  background: #faf5ff; /* faint accent bg */
+  color: #6b21a8;
+  border-color: #f3e8ff;
+}
+
+/* 6) Cards & grid */
+.card {
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-soft);
-  padding: 16px;
+  box-shadow: var(--shadow);
+  padding: var(--space-3);
 }
-.card h2, .card h3 { margin: 0 0 10px; }
 
-/* Form elements */
+.grid-cards {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* Two-column form grid */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+@media (max-width: 720px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+/* 7) Forms */
 label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
-input, select, textarea, button { font: inherit; color: var(--text); }
-input, select, textarea{
-  background: #fff;                     /* <-- light inputs */
+input, textarea, select {
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 10px 12px;
+  font-size: 14px;
+  background: var(--surface);
+  color: var(--text);
   outline: none;
-  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
-input:focus, select:focus, textarea:focus{
-  border-color: var(--brand);
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
   box-shadow: 0 0 0 4px var(--ring);
 }
-button{
-  background: linear-gradient(180deg, var(--brand), var(--brand-2));
-  color: #fff;
-  border: 0; border-radius: 12px; padding: 10px 14px;
-  cursor: pointer; font-weight: 600; letter-spacing: .2px;
-  box-shadow: 0 6px 18px rgba(37,99,235,.28);
+textarea { resize: vertical; }
+
+/* 8) Buttons */
+button, .btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: linear-gradient(180deg, #fdf2ff 0%, #fbe8ff 100%);
+  color: #6b21a8;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .05s ease, box-shadow .15s ease, background .2s ease;
+  box-shadow: var(--shadow);
 }
-button:hover{ filter: brightness(1.05); }
-button:disabled{ opacity: .6; cursor: not-allowed; }
+button:hover, .btn:hover {
+  transform: translateY(-1px);
+}
+button:active, .btn:active {
+  transform: translateY(0);
+}
+button[disabled] { opacity: .6; cursor: not-allowed; }
 
-.error{
-  background: #fff1f1;
-  color: #8b1d1d;
-  border: 1px solid #f5c2c2;
-  padding: 10px 12px; border-radius: 10px;
+/* Secondary/neutral button */
+button.secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
 }
 
-/* Bikes / Rides grids */
-.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
-@media (max-width: 720px){ .grid-2 { grid-template-columns: 1fr; } }
-
-.grid-cards{
+/* 9) Meta lists (for bikes/rides) */
+.bike-card__meta,
+.ride-card__meta {
+  margin: 10px 0 0 0;
+  padding: 0;
+  list-style: none;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0,1fr));
-  gap: 18px; margin-top: 18px;
-}
-@media (max-width: 1024px){ .grid-cards{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
-@media (max-width: 640px){ .grid-cards{ grid-template-columns: 1fr; } }
-
-.bike-card__header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
-.bike-card__title { margin: 0; font-size: 18px; font-weight: 600; }
-.bike-card__price {
-  margin-left: auto; font-weight: 700;
-  background:#fff; border:1px solid var(--border);
-  padding: 4px 10px; border-radius: 999px;
-}
-
-/* Footer */
-.footer{
-  border-top: 1px solid var(--border);
-  background: #fff;
+  gap: 6px;
+  font-size: 14px;
   color: var(--muted);
-  padding: 16px 22px; text-align: center;
+}
+
+/* Price badge */
+.bike-card__price {
+  margin-left: auto;
+  font-weight: 700;
+  font-size: 18px;
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #d1fae5;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+/* 10) Utility */
+.error {
+  background: #fff1f2;
+  color: #9f1239;
+  border: 1px solid #ffe4e6;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #d1fae5;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+/* Tag / chip */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+/* Image styling */
+img {
+  border-radius: 12px;
+}
+
+/* 11) Home page hero helpers (optional) */
+.hero {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(1200px 600px at -10% -40%, #fdf4ff 0%, transparent 50%),
+    radial-gradient(1000px 500px at 120% -20%, #ecfeff 0%, transparent 55%),
+    var(--surface);
+}
+
+.hero h1 span.accent {
+  background: linear-gradient(90deg, #8b5cf6, #e879f9, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 12) Simple link styles */
+a.link,
+.link {
+  color: #7c3aed;
+  text-decoration: none;
+}
+a.link:hover { text-decoration: underline; }
+
+/* 13) Subtle separators */
+.hr {
+  height: 1px;
+  background: var(--border);
+  border: 0;
+  margin: var(--space-3) 0;
+}
+
+/* Force hero CTAs to light-purple */
+.hero-actions .hero-cta.ui-btn[data-variant="soft"] {
+  background: var(--ui-brand-weak) !important;      /* light purple */
+  color: var(--ui-brand-strong);         /* readable purple text */
+  border-color: transparent;
+}
+
+.hero-actions .hero-cta.ui-btn[data-variant="soft"]:hover {
+  background: #e6eaff;                   /* a touch darker on hover */
 }

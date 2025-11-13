@@ -1,28 +1,16 @@
+// client/pages/Rides.jsx
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { Section, Card, CardHeader, CardContent, Field, Input, Button, Badge, EmptyState } from "../ui/UiKit.jsx";
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 export default function Rides() {
-  const { token, userId } = useAuth(); // make sure AuthContext exposes userId (from /auth/me)
-
+  const { token, userId } = useAuth();
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-
   const [stateFilter, setStateFilter] = useState("");
-
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    title: "",
-    date: "",
-    time: "",
-    difficulty: "",
-    terrain: "",
-    state: "",
-    zip_prefix: "",
-    description: "",
-  });
 
   async function loadRides(stateArg = "") {
     try {
@@ -41,42 +29,7 @@ export default function Rides() {
     }
   }
 
-  useEffect(() => { loadRides(); }, []);
-
-  function onChange(e) {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
-  }
-
-  async function onCreate(e) {
-    e.preventDefault();
-    setErr("");
-    if (!form.title.trim() || !form.date) return setErr("Title and date are required.");
-    if (!token) return setErr("Please log in to create a ride.");
-
-    try {
-      setSaving(true);
-      const res = await fetch(`${API}/api/rides`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          ...form,
-          state: form.state?.toUpperCase().slice(0, 2) || undefined,
-          zip_prefix: form.zip_prefix?.slice(0, 3) || undefined,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to create ride");
-
-      setForm({ title: "", date: "", time: "", difficulty: "", terrain: "", state: "", zip_prefix: "", description: "" });
-      await loadRides();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setSaving(false);
-    }
-  }
+  useEffect(() => { loadRides(); /* eslint-disable-next-line */ }, []);
 
   async function toggleRSVP(rideId) {
     if (!token) return setErr("Please log in to RSVP.");
@@ -88,136 +41,94 @@ export default function Rides() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to update RSVP");
-      // refresh list to update counts
       await loadRides();
     } catch (e) {
       setErr(e.message);
     }
   }
 
-  async function fetchRideDetail(rideId) {
-    // owner-only attendees will be included by backend
-    try {
-      const res = await fetch(`${API}/api/rides/${rideId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load ride");
-      return data; // { attendees?: [...], ... }
-    } catch (e) {
-      setErr(e.message);
-      return null;
-    }
-  }
-
   return (
-    <div className="rides-page">
-      <h2 style={{ marginTop: 0 }}>Rides</h2>
-
-      {/* Filter bar */}
-      <form
-        onSubmit={(e) => { e.preventDefault(); loadRides(); }}
-        className="card"
-        style={{ marginBottom: 12, display: "flex", gap: 10, alignItems: "center" }}
+    <>
+      <Section
+        title="Group Rides"
+        subtitle="Find women’s rides near you and RSVP to join."
+        right={<a href="/rides/new"><Button>+ New Ride</Button></a>}
       >
-        <label style={{ display: "flex", gap: 6, alignItems: "center", margin: 0 }}>
-          <span style={{ fontSize: 13, color: "var(--muted)" }}>Filter by state</span>
-          <input
-            name="stateFilter"
-            value={stateFilter}
-            onChange={(e) => setStateFilter(e.target.value)}
-            maxLength={2}
-            placeholder="e.g., CO"
-            style={{ width: 80 }}
+        <Card>
+          <CardContent>
+            <form
+              onSubmit={(e) => { e.preventDefault(); loadRides(); }}
+              style={{ display: "flex", gap: 12, alignItems: "end", flexWrap: "wrap" }}
+            >
+              <Field label="Filter by state">
+                <Input
+                  name="stateFilter"
+                  value={stateFilter}
+                  onChange={(e) => setStateFilter(e.target.value)}
+                  maxLength={2}
+                  placeholder="e.g., CO"
+                  style={{ width: 100 }}
+                />
+              </Field>
+              <Button type="submit">Apply</Button>
+              {stateFilter && (
+                <Button type="button" variant="neutral" onClick={() => { setStateFilter(""); loadRides(""); }}>
+                  Clear
+                </Button>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+      </Section>
+
+      <Section title="Upcoming rides">
+        {err && <div className="error" style={{ marginBottom: 12 }}>{err}</div>}
+
+        {loading ? (
+          <Card><CardContent>Loading rides…</CardContent></Card>
+        ) : rides.length === 0 ? (
+          <EmptyState
+            title="No rides yet"
+            body="Start one for your local community."
+            action={<a href="/rides/new"><Button>+ Create ride</Button></a>}
           />
-        </label>
-        <button type="submit">Apply</button>
-        {stateFilter && (
-          <button
-            type="button"
-            onClick={() => { setStateFilter(""); loadRides(""); }}
-            style={{ background: "#e5e7eb", color: "black" }}
-          >
-            Clear
-          </button>
-        )}
-      </form>
+        ) : (
+          <div className="grid-cards">
+            {rides.map((r) => (
+              <Card key={r.id}>
+                <CardHeader
+                  overline={r.state || "Ride"}
+                  title={r.title}
+                  aside={<Badge tone="brand">{r.attendee_count ?? 0} attending</Badge>}
+                />
+                <CardContent>
+                  <ul className="ride-card__meta">
+                    {r.date && <li><strong>Date:</strong> {r.date}</li>}
+                    {r.time && <li><strong>Time:</strong> {r.time}</li>}
+                    {r.difficulty && <li><strong>Difficulty:</strong> {r.difficulty}</li>}
+                    {r.terrain && <li><strong>Terrain:</strong> {r.terrain}</li>}
+                    {r.zip_prefix && <li><strong>ZIP:</strong> {r.zip_prefix}</li>}
+                  </ul>
 
-      {/* Create form */}
-      {token ? (
-        <form onSubmit={onCreate} className="card form-card">
-          <h3 style={{ marginTop: 0 }}>Create a ride</h3>
-          {err && <div className="error">{err}</div>}
-
-          <div className="grid-2">
-            <label>Title*<input name="title" value={form.title} onChange={onChange} required placeholder="e.g., Saturday Tempo Ride" /></label>
-            <label>Date*<input type="date" name="date" value={form.date} onChange={onChange} required /></label>
-
-            <label>Time<input type="time" name="time" value={form.time} onChange={onChange} /></label>
-            <label>Difficulty<input name="difficulty" value={form.difficulty} onChange={onChange} placeholder="e.g., Intermediate" /></label>
-
-            <label>Terrain<input name="terrain" value={form.terrain} onChange={onChange} placeholder="e.g., Singletrack" /></label>
-            <label>State (2 letters)<input name="state" value={form.state} onChange={onChange} maxLength={2} placeholder="e.g., CO" /></label>
-
-            <label>ZIP prefix (3 digits)<input name="zip_prefix" value={form.zip_prefix} onChange={onChange} maxLength={3} placeholder="e.g., 803" /></label>
-
-            <label style={{ gridColumn: "1 / -1" }}>Description
-              <textarea name="description" value={form.description} onChange={onChange} rows={3} placeholder="Pace, distance, meetup details…" />
-            </label>
+                  <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
+                    <Button onClick={() => toggleRSVP(r.id)}>RSVP / Un-RSVP</Button>
+                    {userId && r.owner_id === userId && <OwnerAttendeesBadge rideId={r.id} token={token} />}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-
-          <button type="submit" disabled={saving}>{saving ? "Saving…" : "Create Ride"}</button>
-        </form>
-      ) : (
-        <div className="card" style={{ marginBottom: 16 }}>
-          Please <a href="/login">log in</a> or <a href="/signup">sign up</a> to create and RSVP.
-          {err && <div className="error" style={{ marginTop: 8 }}>{err}</div>}
-        </div>
-      )}
-
-      {/* List */}
-      {err && <div className="card error">{err}</div>}
-      {loading ? (
-        <div className="card">Loading rides…</div>
-      ) : rides.length === 0 ? (
-        <div className="card">No rides found.</div>
-      ) : (
-        <div className="grid-cards">
-          {rides.map((r) => (
-            <article key={r.id} className="card">
-              <h3 style={{ marginTop: 0 }}>{r.title}</h3>
-              <ul className="bike-card__meta">
-                {r.date && <li><strong>Date:</strong> {r.date}</li>}
-                {r.time && <li><strong>Time:</strong> {r.time}</li>}
-                {r.difficulty && <li><strong>Difficulty:</strong> {r.difficulty}</li>}
-                {r.terrain && <li><strong>Terrain:</strong> {r.terrain}</li>}
-                {r.state && <li><strong>State:</strong> {r.state}</li>}
-                {r.zip_prefix && <li><strong>ZIP:</strong> {r.zip_prefix}</li>}
-                <li><strong>Attending:</strong> {r.attendee_count ?? 0}</li>
-              </ul>
-
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <button onClick={() => toggleRSVP(r.id)}>
-                  RSVP / Un-RSVP
-                </button>
-
-                {userId && r.owner_id === userId && (
-                  <OwnerAttendeesBadge rideId={r.id} token={token} />
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-    </div>
+        )}
+      </Section>
+    </>
   );
 }
 
-/** Small inline component to show attendees if you are the owner */
+import { useEffect as useEffect2, useState as useState2 } from "react";
 function OwnerAttendeesBadge({ rideId, token }) {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [list, setList] = useState([]);
+  const [open, setOpen] = useState2(false);
+  const [loading, setLoading] = useState2(false);
+  const [list, setList] = useState2([]);
 
   async function load() {
     try {
@@ -226,35 +137,32 @@ function OwnerAttendeesBadge({ rideId, token }) {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
-      if (res.ok && Array.isArray(data.attendees)) {
-        setList(data.attendees);
-      } else {
-        setList([]);
-      }
+      if (res.ok && Array.isArray(data.attendees)) setList(data.attendees);
+      else setList([]);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { if (open) load(); }, [open]);
+  useEffect2(() => { if (open) load(); }, [open]);
 
   return (
     <div>
-      <button type="button" onClick={() => setOpen((v) => !v)}>
+      <Button variant="neutral" onClick={() => setOpen(v => !v)}>
         {open ? "Hide attendees" : "View attendees"}
-      </button>
+      </Button>
       {open && (
-        <div className="card" style={{ marginTop: 8 }}>
-          {loading ? "Loading…" : (
-            list.length === 0 ? "No RSVPs yet." : (
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {list.map(a => (
-                  <li key={a.id}>{a.email}</li>
-                ))}
-              </ul>
-            )
-          )}
-        </div>
+        <Card style={{ marginTop: 8 }}>
+          <CardContent>
+            {loading ? "Loading…" : (
+              list.length === 0 ? "No RSVPs yet." : (
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {list.map(a => (<li key={a.id}>{a.email}</li>))}
+                </ul>
+              )
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );

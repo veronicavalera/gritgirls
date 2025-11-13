@@ -1,51 +1,36 @@
-// client/App.jsx
-import { NavLink, Outlet, Link } from "react-router-dom";
+// App.jsx (header part only)
+import { Navbar, NavLinkPill, Container, Button } from "./ui/UiKit.jsx";
+import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext.jsx";
 
 export default function App() {
   const { userEmail, logout } = useAuth();
+  const { pathname } = useLocation();
 
   return (
     <div className="app">
-      <header className="header" style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <Link to="/" style={{ textDecoration: "none", color: "inherit" }}>
-          <h1 style={{ fontSize: 30, margin: 0 }}>GritGirls</h1>
-        </Link>
-
-        <nav className="nav" style={{ display: "flex", gap: 12 }}>
-          <NavLink to="/" className={({ isActive }) => `link ${isActive ? "active" : ""}`} end>
-            Home
-          </NavLink>
-          <NavLink to="/bikes" className={({ isActive }) => `link ${isActive ? "active" : ""}`}>
-            Bikes
-          </NavLink>
-          <NavLink to="/rides" className={({ isActive }) => `link ${isActive ? "active" : ""}`}>
-            Rides
-          </NavLink>
-          <NavLink to="/profile" className={({ isActive }) => `link ${isActive ? "active" : ""}`}>
-            Profile
-          </NavLink>
-        </nav>
-
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-          {userEmail ? (
+      <Navbar
+        brand={<Link to="/" style={{ textDecoration: "none" }}>GritGirls</Link>}
+        right={
+          userEmail ? (
             <>
-              <span style={{ fontSize: 14, opacity: 0.8 }}>{userEmail}</span>
-              <button onClick={logout}>Logout</button>
+              <span style={{ fontSize: 14, color: "var(--ui-muted)" }}>{userEmail}</span>
+              <Button onClick={logout} variant="neutral">Logout</Button>
             </>
           ) : (
-            <>
-              <Link className="link" to="/login">Login</Link>
-              <Link className="link" to="/signup">Signup</Link>
-            </>
-          )}
-        </div>
-      </header>
+            <Link to="/login"><Button>Login</Button></Link>
+          )
+        }
+      >
+        <NavLinkPill href="/" className="" active={pathname === "/"}>Home</NavLinkPill>
+        <NavLinkPill href="/bikes" active={pathname.startsWith("/bikes")}>Bikes</NavLinkPill>
+        <NavLinkPill href="/rides" active={pathname.startsWith("/rides")}>Rides</NavLinkPill>
+        <NavLinkPill href="/profile" active={pathname.startsWith("/profile")}>Profile</NavLinkPill>
+      </Navbar>
 
-      {/* Let each page control its own cards/sections */}
-      <main className="main">
+      <Container>
         <Outlet />
-      </main>
+      </Container>
 
       <footer className="footer">© {new Date().getFullYear()} GritGirls</footer>
     </div>

@@ -93,6 +93,12 @@ class Bike(db.Model):
 
     owner = db.relationship("User", lazy="joined")
 
+    # NEW: payment/listing lifecycle
+    is_active = db.Column(db.Boolean, default=False, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    stripe_listing_session = db.Column(db.String(120), nullable=True)
+    stripe_last_renew_session = db.Column(db.String(120), nullable=True)
+
     def to_dict(self):
         photos = [p for p in [self.photo1_url, self.photo2_url, self.photo3_url] if p]
         return dict(
@@ -128,6 +134,9 @@ class Bike(db.Model):
             photos=photos,
 
             created_at=self.created_at.isoformat() if self.created_at else None,
+            is_active=self.is_active,
+            expires_at=self.expires_at.isoformat() if self.expires_at else None,
+
         )
 
 
@@ -185,4 +194,15 @@ class Ride(db.Model):
                 {"id": u.id, "email": u.email} for u in self.attendees
             ]
         return data
+    
+class Payment(db.Model):
+    __tablename__ = "payment"
+    id = db.Column(db.Integer, primary_key=True)
+    kind = db.Column(db.String(20), nullable=False)  # "listing" or "renewal"
+    bike_id = db.Column(db.Integer, db.ForeignKey("bike.id"), nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    stripe_session_id = db.Column(db.String(120), unique=True, nullable=False)
+    amount_cents = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
     

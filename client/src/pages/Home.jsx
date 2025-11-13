@@ -15,7 +15,7 @@ export default function Home() {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
             <Link to="/bikes"><button>Browse Bikes</button></Link>
             <Link to="/rides"><button>Find a Group Ride</button></Link>
-            <Link to="/signup"><button style={{ background: "#111827" }}>Join the Community</button></Link>
+            <Link to="/signup"><button style={{ background: "#f0bff3ff" }}>Join the Community</button></Link>
           </div>
         </div>
       </section>
@@ -122,7 +122,7 @@ export default function Home() {
         <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
           <Link to="/bikes"><button>List or Browse Bikes</button></Link>
           <Link to="/rides"><button>See Upcoming Rides</button></Link>
-          <Link to="/signup"><button style={{ background: "#111827" }}>Create Your Profile</button></Link>
+          <Link to="/signup"><button style={{ background: "#f0bff3ff" }}>Create Your Profile</button></Link>
         </div>
       </section>
     </div>

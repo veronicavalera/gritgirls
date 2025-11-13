@@ -6,6 +6,8 @@ from . import db
 import os
 import re
 
+
+
 api_bp = Blueprint("api", __name__)
 
 # ---------------------------
@@ -123,6 +125,8 @@ def create_bike():
         weight_lb=_to_float(data.get("weight_lb")),
 
         owner_id=owner_id,
+        is_active=False,   # NEW
+        expires_at=None,   # NEW
     )
 
     # Photos (optional): expect list of URLs
@@ -136,6 +140,10 @@ def create_bike():
 @api_bp.get("/bikes")
 def list_bikes():
     q = Bike.query
+    now = datetime.utcnow()
+    q = q.filter(Bike.is_active == True).filter(
+        (Bike.expires_at == None) | (Bike.expires_at >= now)
+    )
     state = (request.args.get("state") or "").strip().upper()[:2]
     if state:
         q = q.filter(Bike.state == state)
