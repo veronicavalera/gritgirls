@@ -5,52 +5,83 @@ from .models import Bike, Ride, UserProfile, RideAttendee, User
 from . import db
 import os
 import re
+# sources: https://www.geeksforgeeks.org/python/flask-app-routing/
+# https://medium.com/@sim30217/routes-in-flask-8c819797f9eb
+# https://testdriven.io/courses/learn-flask/routing/
+
+# Defines a Flask Blueprint called api_bp that mounts 
+# backend JSON API. All the URL routes like /bikes, /rides, /profile live here.
+# note to self: defines endpoints (/bikes, /rides, /profile) without wiring them directly to the main app.
+#   Then with create_app, every route defined in the blueprint 
+#   (e.g. "/bikes") becomes available at "/api/bikes" on the real server.
+#   Those routes return JSON (not HTML pages), so the React frontend can fetch(...) them
+# It uses JWT auth (@jwt_required) to protect routes that 
+# need a logged-in user and pulls the user id with get_jwt_identity().
+# Client pages call these routes with fetch
 
 
-
+# -----------------------------------------------------------------------------
+# Blueprint
+# -----------------------------------------------------------------------------
+# A Blueprint is a modular bundle of routes. We register this Blueprint under
+# the prefix "/api" in create_app(), so a function declared here at "/bikes"
+# will be served at "/api/bikes".
 api_bp = Blueprint("api", __name__)
 
 # ---------------------------
 # Basic health
 # ---------------------------
+# note: needed help getting started with routing, so 
+# had chatgpt help with these original endpoints (syntax) 
+# this 
+
+# confirms the app is running and reachable—without touching the database or any heavy logic
 @api_bp.get("/health")
 def health():
     return jsonify({"ok": True})
 
-# ---------------------------
-# Helpers
-# ---------------------------
+# -----------------------------------------------------------------------------
+# Helpers (pure functions; easy to unit test)
+# -----------------------------------------------------------------------------
 def _to_int(x):
+    """Attempt to coerce a value to int; return None on any failure."""
     try:
         return int(str(x).strip())
     except Exception:
         return None
 
 def _to_float(x):
+    """Attempt to coerce a value to float; return None on any failure."""
     try:
         return float(str(x).strip())
     except Exception:
         return None
 
 def _parse_frame_inches(size_text: str | None):
+    """
+    Extract a frame size in inches from a human string like '17.5"', '17"', '17 in'.
+    Returns an int in a safe/expected range if found; otherwise None.
+    """
     if not size_text:
         return None
     s = size_text.strip().lower().replace('”', '"')
-    m = re.search(r'\b(\d{2})\s*(?:in|")?\b', s)  # 14–30"
+    # Look for a two-digit number followed by optional in/" marker.
+    m = re.search(r'\b(\d{2})\s*(?:in|")?\b', s)  # typical 14–30 range
     if m:
         v = int(m.group(1))
         if 14 <= v <= 30:
             return v
     return None
 
-# --- photo helpers (store up to 3 urls on model) ---
+# --- Photo helpers: we store up to 3 URLs on the Bike model as photo1/2/3 ----
 def _set_bike_photos(model: Bike, photos_list):
+    """Assign up to 3 photo URLs onto model.photo1_url/photo2_url/photo3_url."""
     photos_list = photos_list or []
-    urls = photos_list[:3] + [None, None, None]
-    # These attributes must exist on the Bike model
+    urls = photos_list[:3] + [None, None, None]  # pad to 3
     model.photo1_url, model.photo2_url, model.photo3_url = urls[:3]
 
 def _get_bike_photos(model: Bike):
+    """Return a compact list of photo URLs that are present on the model."""
     return [u for u in [
         getattr(model, "photo1_url", None),
         getattr(model, "photo2_url", None),
@@ -59,8 +90,10 @@ def _get_bike_photos(model: Bike):
 
 def _delete_upload_file_if_local(url: str):
     """
-    If url looks like '/api/uploads/<file>', remove file from uploads dir.
-    We swallow errors to avoid blocking listing deletion.
+    Best-effort cleanup helper. If the URL points to our local upload handler
+    ("/api/uploads/<filename>"), remove the file from UPLOAD_DIR.
+    - Swallows exceptions so delete operations don’t fail because of filesystem.
+    - Validates the path to avoid deleting outside of UPLOAD_DIR.
     """
     try:
         if not url or not url.startswith("/api/uploads/"):
@@ -70,35 +103,49 @@ def _delete_upload_file_if_local(url: str):
             return
         fname = url.rsplit("/", 1)[-1]
         path = os.path.join(uploads_dir, fname)
+        # Safety: ensure resolved path remains inside UPLOAD_DIR
         if os.path.abspath(path).startswith(os.path.abspath(uploads_dir)) and os.path.exists(path):
             os.remove(path)
     except Exception:
+        # Never block delete flow if cleanup fails
         pass
 
-# ---------------------------
+# -----------------------------------------------------------------------------
 # Bikes
-# ---------------------------
+# -----------------------------------------------------------------------------
 @api_bp.post("/bikes")
 @jwt_required()
 def create_bike():
+    """
+    Create a new bike listing as a DRAFT (is_active=False).
+    - Requires auth: we set owner_id from the JWT.
+    - Accepts core fields and an optional 'photos' list (URLs).
+    - Normalizes numeric/text fields defensively.
+    """
     data = request.get_json() or {}
 
+    # Required field
     title = (data.get("title") or "").strip()
     if not title:
         return jsonify({"error": "title is required"}), 400
 
+    # Owner from JWT
     owner_id = int(get_jwt_identity())
+
+    # Normalize location fields
     state = (data.get("state") or "").strip().upper()[:2] or None
 
-    # prefer full 5-digit zip
+    # Prefer a clean 5-digit ZIP if provided
     z = (data.get("zip") or "").strip()
     zip_full = z[:5] if z.isdigit() and len(z) >= 5 else None
 
+    # Frame size can be inferred from 'size' textual label when not given directly
     size_text = (data.get("size") or "").strip() or None
     frame_in = _to_int(data.get("frame_size_in")) or _parse_frame_inches(size_text)
 
+    # Build the model (draft by default)
     b = Bike(
-        # Card fields
+        # Card fields (brief summary for grid)
         title=title,
         brand=(data.get("brand") or "").strip() or None,
         model=(data.get("model") or "").strip() or None,
@@ -107,13 +154,13 @@ def create_bike():
         price_usd=_to_int(data.get("price_usd")),
         state=state,
 
-        # Details fields
+        # Detail fields (spec sheet)
         wheel_size=(data.get("wheel_size") or "").strip() or None,
         condition=(data.get("condition") or "").strip() or None,
         zip=zip_full,
         description=(data.get("description") or "").strip() or None,
 
-        # Optional extras
+        # Optional extras (numeric/safe conversions)
         frame_size_in=frame_in,
         rider_height_min_in=_to_int(data.get("rider_height_min_in")),
         rider_height_max_in=_to_int(data.get("rider_height_max_in")),
@@ -125,11 +172,11 @@ def create_bike():
         weight_lb=_to_float(data.get("weight_lb")),
 
         owner_id=owner_id,
-        is_active=False,   # NEW
-        expires_at=None,   # NEW
+        is_active=False,   # stays draft until Stripe webhook publishes it
+        expires_at=None,   # set upon publish/renew
     )
 
-    # Photos (optional): expect list of URLs
+    # Save up to 3 optional photos
     photos = data.get("photos") or []
     _set_bike_photos(b, photos)
 
@@ -139,26 +186,46 @@ def create_bike():
 
 @api_bp.get("/bikes")
 def list_bikes():
+    """
+    Public index of ACTIVE, non-expired listings.
+    - Filters out drafts and expired items.
+    - Optional ?state=XX filter.
+    - Sorted newest first.
+    """
     q = Bike.query
     now = datetime.utcnow()
+
+    # Only show active and not-yet-expired
     q = q.filter(Bike.is_active == True).filter(
         (Bike.expires_at == None) | (Bike.expires_at >= now)
     )
+
+    # Optional state filter
     state = (request.args.get("state") or "").strip().upper()[:2]
     if state:
         q = q.filter(Bike.state == state)
+
     bikes = q.order_by(Bike.created_at.desc()).all()
     return jsonify([b.to_dict() for b in bikes])
 
 @api_bp.get("/bikes/mine")
 @jwt_required()
 def list_my_bikes():
+    """
+    Owner’s dashboard view.
+    - Returns *all* the user’s listings (draft, active, expired).
+    - Useful for managing renewals and edits.
+    """
     uid = int(get_jwt_identity())
     bikes = Bike.query.filter_by(owner_id=uid).order_by(Bike.created_at.desc()).all()
     return jsonify([b.to_dict() for b in bikes])
 
 @api_bp.get("/bikes/<int:bike_id>")
 def get_bike(bike_id: int):
+    """
+    Public detail view for a single listing (drafts are still fetchable by ID).
+    - The client can decide what actions to allow based on ownership/active status.
+    """
     bike = Bike.query.get(bike_id)
     if not bike:
         return jsonify({"error": "Bike not found"}), 404
@@ -167,7 +234,11 @@ def get_bike(bike_id: int):
 @api_bp.put("/bikes/<int:bike_id>")
 @jwt_required()
 def update_bike(bike_id: int):
-    """Owner-only partial update. Accepts same fields as create + optional 'photos':[...]."""
+    """
+    Owner-only partial update for a listing.
+    - Accepts same fields as create, plus an optional full replacement of 'photos'.
+    - Enforces non-empty title if provided.
+    """
     b = Bike.query.get(bike_id)
     if not b:
         return jsonify({"error": "Bike not found"}), 404
@@ -178,7 +249,7 @@ def update_bike(bike_id: int):
 
     data = request.get_json() or {}
 
-    # Card fields
+    # ---- Card fields
     if "title" in data:
         title = (data.get("title") or "").strip()
         if not title:
@@ -193,7 +264,7 @@ def update_bike(bike_id: int):
         s = (data.get("state") or "").strip().upper()[:2]
         b.state = s or None
 
-    # Details
+    # ---- Detailed fields
     if "wheel_size" in data: b.wheel_size = (data.get("wheel_size") or "").strip() or None
     if "condition" in data: b.condition = (data.get("condition") or "").strip() or None
     if "zip" in data:
@@ -201,9 +272,10 @@ def update_bike(bike_id: int):
         b.zip = z[:5] if z.isdigit() and len(z) >= 5 else None
     if "description" in data: b.description = (data.get("description") or "").strip() or None
 
-    # Optional extras
+    # ---- Optional numeric/extras
     if "frame_size_in" in data:
         v = _to_int(data.get("frame_size_in"))
+        # If not provided or invalid, try to infer again from size label
         b.frame_size_in = v if v is not None else _parse_frame_inches(b.size)
     if "rider_height_min_in" in data: b.rider_height_min_in = _to_int(data.get("rider_height_min_in"))
     if "rider_height_max_in" in data: b.rider_height_max_in = _to_int(data.get("rider_height_max_in"))
@@ -214,7 +286,7 @@ def update_bike(bike_id: int):
     if "saddle" in data: b.saddle = (data.get("saddle") or "").strip() or None
     if "weight_lb" in data: b.weight_lb = _to_float(data.get("weight_lb"))
 
-    # Photos (replace set if provided)
+    # ---- Photos (replace entire set if supplied)
     if "photos" in data:
         photos = data.get("photos") or []
         _set_bike_photos(b, photos)
@@ -225,6 +297,10 @@ def update_bike(bike_id: int):
 @api_bp.delete("/bikes/<int:bike_id>")
 @jwt_required()
 def delete_bike(bike_id: int):
+    """
+    Owner-only delete.
+    - Cleans up locally-uploaded files that were attached to this listing.
+    """
     b = Bike.query.get(bike_id)
     if not b:
         return jsonify({"error": "Bike not found"}), 404
@@ -233,7 +309,7 @@ def delete_bike(bike_id: int):
     if b.owner_id != user_id:
         return jsonify({"error": "Forbidden"}), 403
 
-    # clean up uploaded photos (best-effort)
+    # Best-effort cleanup of uploaded files
     for u in _get_bike_photos(b):
         _delete_upload_file_if_local(u)
 
@@ -241,12 +317,16 @@ def delete_bike(bike_id: int):
     db.session.commit()
     return jsonify({"ok": True}), 200
 
-# ---------------------------
+# -----------------------------------------------------------------------------
 # Rides
-# ---------------------------
+# -----------------------------------------------------------------------------
 @api_bp.get("/rides/<int:ride_id>")
 @jwt_required(optional=True)
 def ride_detail(ride_id):
+    """
+    Public ride detail. If the requester is the ride owner (JWT present and
+    matches), include attendee emails in the response for management purposes.
+    """
     ride = Ride.query.get(ride_id)
     if not ride:
         return jsonify({"error": "Ride not found"}), 404
@@ -255,10 +335,14 @@ def ride_detail(ride_id):
     include_attendees = (current_user_id is not None and ride.owner_id == int(current_user_id))
     return jsonify(ride.to_dict(include_attendees=include_attendees)), 200
 
-# RSVP toggle
 @api_bp.post("/rides/<int:ride_id>/rsvp")
 @jwt_required()
 def rsvp_toggle(ride_id):
+    """
+    Toggle RSVP for the current user.
+    - If already RSVP’d → remove (200).
+    - If not RSVP’d → add (201).
+    """
     ride = Ride.query.get(ride_id)
     if not ride:
         return jsonify({"error": "Ride not found"}), 404
@@ -275,9 +359,13 @@ def rsvp_toggle(ride_id):
         db.session.commit()
         return jsonify({"ok": True, "status": "added"}), 201
 
-# Rides list — returns attendee_count via Ride.to_dict()
 @api_bp.get("/rides")
 def list_rides():
+    """
+    Public list of rides (optionally filter by state).
+    - Sorted soonest first (date/time ascending).
+    - Each ride dict carries attendee_count.
+    """
     state = (request.args.get("state") or "").strip().upper()[:2]
     q = Ride.query
     if state:
@@ -285,10 +373,14 @@ def list_rides():
     rides = q.order_by(Ride.date.asc(), Ride.time.asc()).all()
     return jsonify([r.to_dict() for r in rides])
 
-# Rides: create (auth)
 @api_bp.post("/rides")
 @jwt_required()
 def create_ride():
+    """
+    Create a new ride (requires auth).
+    - title and date are required (date is ISO 'YYYY-MM-DD').
+    - owner_id set from JWT.
+    """
     data = request.get_json() or {}
     title = (data.get("title") or "").strip()
     date = (data.get("date") or "").strip()   # "YYYY-MM-DD"
@@ -298,7 +390,7 @@ def create_ride():
 
     r = Ride(
         title=title,
-        date=datetime.fromisoformat(date).date(),
+        date=datetime.fromisoformat(date).date(),  # store as date object
         time=(data.get("time") or "").strip() or None,
         difficulty=(data.get("difficulty") or "").strip() or None,
         terrain=(data.get("terrain") or "").strip() or None,
@@ -311,16 +403,20 @@ def create_ride():
     db.session.commit()
     return jsonify(r.to_dict()), 201
 
-# ---------------------------
+# -----------------------------------------------------------------------------
 # Profile
-# ---------------------------
+# -----------------------------------------------------------------------------
 @api_bp.get("/profile")
 @jwt_required()
 def get_profile():
+    """
+    Fetch the current user's profile.
+    - If it doesn’t exist yet, create an empty profile automatically.
+    """
     user_id = int(get_jwt_identity())
     prof = UserProfile.query.filter_by(user_id=user_id).first()
     if not prof:
-        # create an empty profile on first access so PUT isn’t required first
+        # Auto-create an empty profile on first access
         prof = UserProfile(user_id=user_id)
         db.session.add(prof)
         db.session.commit()
@@ -329,6 +425,11 @@ def get_profile():
 @api_bp.put("/profile")
 @jwt_required()
 def update_profile():
+    """
+    Upsert profile fields for the current user (basic normalization included).
+    - Keeps inputs resilient to empty strings vs None.
+    - Uppercases state; truncates zip_prefix to 5 chars.
+    """
     user_id = int(get_jwt_identity())
     data = request.get_json() or {}
 
@@ -337,12 +438,15 @@ def update_profile():
         prof = UserProfile(user_id=user_id)
         db.session.add(prof)
 
-    # simple normalization
+    # Normalize and assign fields
     prof.age = int(data.get("age")) if data.get("age") not in (None, "",) else None
+
     state = (data.get("state") or "").strip().upper()
     prof.state = state[:2] or None
+
     zp = (data.get("zip_prefix") or "").strip()
     prof.zip_prefix = zp[:5] or None
+
     prof.experience_level = (data.get("experience_level") or "").strip() or None
     prof.bike = (data.get("bike") or "").strip() or None
     prof.phone = (data.get("phone") or "").strip() or None

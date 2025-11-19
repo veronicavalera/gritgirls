@@ -3,13 +3,16 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 
+// Backend base URL; falls back to local dev if Vite env isn't set
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
+// Convert relative file paths from the API into absolute URLs for <img src="">
 function fullUrl(u) {
   if (!u) return u;
   return /^https?:\/\//i.test(u) ? u : `${API}${u}`;
 }
 
+// Display 66 inches as 5'6" (purely for nicer UI)
 function inchesToFeet(inches) {
   if (inches == null) return null;
   const ft = Math.floor(inches / 12);
@@ -18,26 +21,34 @@ function inchesToFeet(inches) {
 }
 
 export default function BikeDetail() {
+  // Pull :id from /bikes/:id
   const { id } = useParams();
   const navigate = useNavigate();
+
+  // Logged-in user + token from global auth context
   const { token, userEmail } = useAuth();
 
-  const [bike, setBike] = useState(null);
-  const [err, setErr] = useState("");
-  const [saving, setSaving] = useState(false);
+  // Local view state
+  const [bike, setBike] = useState(null);   // current listing (or null while loading)
+  const [err, setErr] = useState("");       // last error string to show
+  const [saving, setSaving] = useState(false); // for disabling Delete while posting
 
-  // carousel
+  // --- Carousel state ---
+  // NOTE: Safely compute photos to avoid undefined/falsey crashes.
+  // https://uploadcare.com/blog/how-to-upload-file-in-react/
   const photos = Array.isArray(bike?.photos) ? bike.photos : [];
   const [idx, setIdx] = useState(0);
 
+  // If photos change (e.g., after edit) and idx points outside, reset to first
   useEffect(() => {
     if (idx >= photos.length) setIdx(0);
   }, [photos.length, idx]);
 
+  // Fetch the bike on mount and whenever the :id param changes
   useEffect(() => {
     (async () => {
       try {
-        setErr("");
+        setErr(""); // clear any prior error before a new fetch
         const res = await fetch(`${API}/api/bikes/${id}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Not found");
@@ -48,6 +59,7 @@ export default function BikeDetail() {
     })();
   }, [id]);
 
+  // Prev/Next handlers wrap around; useCallback prevents re-creating handlers on every render
   const goPrev = useCallback(() => {
     if (photos.length === 0) return;
     setIdx((i) => (i - 1 + photos.length) % photos.length);
@@ -58,6 +70,7 @@ export default function BikeDetail() {
     setIdx((i) => (i + 1) % photos.length);
   }, [photos.length]);
 
+  // Keyboard support for carousel (← and →)
   useEffect(() => {
     function onKey(e) {
       if (e.key === "ArrowLeft") goPrev();
@@ -67,26 +80,30 @@ export default function BikeDetail() {
     return () => window.removeEventListener("keydown", onKey);
   }, [goPrev, goNext]);
 
+  // Handle loading and fetch errors early
   if (err) return <div className="card">Error: {err}</div>;
   if (!bike) return <div className="card">Loading…</div>;
 
+  // --- Ownership & visibility logic for the action buttons/banner ---
   const isOwner = !!userEmail && bike.owner_email === userEmail;
   const expiresAt = bike.expires_at ? new Date(bike.expires_at) : null;
   const isExpired = !!expiresAt && expiresAt < new Date();
 
+  // Owner-only destructive action: Delete listing
   async function onDelete() {
     if (!token) return setErr("Please log in.");
     const ok = window.confirm("Delete this listing? This cannot be undone.");
     if (!ok) return;
+
     try {
       setSaving(true);
       const res = await fetch(`${API}/api/bikes/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }, // WHY: server needs to verify you own the listing
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Delete failed");
-      navigate("/bikes");
+      navigate("/bikes"); // back to listings on success
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -94,6 +111,7 @@ export default function BikeDetail() {
     }
   }
 
+  // Nicely formatted rider height range, only if both ends are present
   const heightRange =
     bike.rider_height_min_in && bike.rider_height_max_in
       ? `${inchesToFeet(bike.rider_height_min_in)} – ${inchesToFeet(bike.rider_height_max_in)}`
@@ -103,7 +121,8 @@ export default function BikeDetail() {
     <div className="card" style={{ display: "grid", gap: 12 }}>
       <Link to="/bikes" style={{ fontSize: 14 }}>&larr; Back to Bikes</Link>
 
-      {/* --- Status banner --- */}
+      {/* --- Status banner (draft/active/expired) --- */}
+      {/* WHY: This makes the state of the listing obvious and groups owner actions together. */}
       <div
         className="card"
         style={{
@@ -133,14 +152,15 @@ export default function BikeDetail() {
           </div>
         </div>
 
+        {/* Owner-only actions: Edit, Pay/Renew, Delete */}
         {isOwner && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {/* Edit → go to full edit form */}
+            {/* Edit → go to the full edit form (reuses your create form UI) */}
             <Link to={`/bikes/${bike.id}/edit`}>
               <button className="ui-btn ui-btn--md" data-variant="outline">Edit</button>
             </Link>
 
-            {/* Pay actions */}
+            {/* Draft → Pay; Active → Renew */}
             {!bike.is_active ? (
               <Link to={`/pay/${bike.id}`}>
                 <button className="ui-btn ui-btn--md" data-variant="brand">Pay $10 to Post</button>
@@ -151,7 +171,7 @@ export default function BikeDetail() {
               </Link>
             )}
 
-            {/* Delete */}
+            {/* Destructive action (with spinner while saving) */}
             <button
               className="ui-btn ui-btn--md"
               data-variant="danger"
@@ -166,6 +186,8 @@ export default function BikeDetail() {
       </div>
 
       {/* --- Carousel (letterboxed, no crop) --- */}
+      {/* WHY: Using .img-frame/.img-fit classes keeps a consistent frame without cropping images oddly. */}
+      {/* used chatGPT for photo formatting because the photos were getting cut off */}
       {photos.length > 0 && (
         <div className="card" style={{ padding: 0 }}>
           <div className="img-frame img-frame--detail" style={{ position: "relative" }}>
@@ -173,11 +195,13 @@ export default function BikeDetail() {
               key={idx}
               src={fullUrl(photos[idx])}
               alt={`${bike.title} photo ${idx + 1} of ${photos.length}`}
-              className="img-fit"
+              className="img-fit" // NOTE: see index.css for object-fit + max sizing
             />
+            {/* Prev/Next buttons with accessible labels */}
             <button type="button" aria-label="Previous image" onClick={goPrev} style={navBtnStyle("left")}>‹</button>
             <button type="button" aria-label="Next image" onClick={goNext} style={navBtnStyle("right")}>›</button>
 
+            {/* Dots indicator */}
             <div
               style={{
                 position: "absolute",
@@ -212,6 +236,7 @@ export default function BikeDetail() {
       )}
 
       {/* --- Price & quick facts --- */}
+      {/* WHY: Show only the facts that exist to keep the UI clean. */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         {typeof bike.price_usd === "number" && (
           <span className="bike-card__price">${bike.price_usd.toLocaleString()}</span>
@@ -228,6 +253,7 @@ export default function BikeDetail() {
         {bike.owner_email && <span><strong>Listed by:</strong> {bike.owner_email}</span>}
       </div>
 
+      {/* Long description */}
       {bike.description && <p style={{ marginTop: 4 }}>{bike.description}</p>}
 
       {/* --- Specs grid --- */}
@@ -245,6 +271,7 @@ export default function BikeDetail() {
   );
 }
 
+// Small presentational piece for the specs grid
 function Spec({ label, value }) {
   return (
     <div className="card" style={{ padding: "10px 12px" }}>
@@ -254,6 +281,7 @@ function Spec({ label, value }) {
   );
 }
 
+// Styles for the round, overlayed carousel nav buttons
 function navBtnStyle(side) {
   return {
     position: "absolute",

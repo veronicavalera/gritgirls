@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 export default function Home() {
   return (
     <div className="home" style={{ display: "grid", gap: 16 }}>
-      {/* Hero */}
+      {/* Hero  */}
       <section className="card" style={{ padding: "28px 28px" }}>
         <div style={{ display: "grid", gap: 10 }}>
           <h1 style={{ margin: 0 }}>GritGirls</h1>

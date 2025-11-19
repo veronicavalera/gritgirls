@@ -1,4 +1,7 @@
 /* client/ui/kit.css */
+/* WHAT: styles for UiKit classes
+/* used chatgpt for help with the styling/themes
+/* source: https://www.w3schools.com/react/react_css.asp
 /* Palette / tokens */
 :root{
   --ui-bg: #f7fafc;

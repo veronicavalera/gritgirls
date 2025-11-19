@@ -1,9 +1,13 @@
 from . import db
 from sqlalchemy import UniqueConstraint
 from datetime import datetime, timedelta
-from sqlalchemy.dialects.sqlite import JSON
+# defines  database schema and a few helper methods for auth, serialization, and the listing lifecycle
 
-
+# Werkzeug for password hashing—so we never store raw passwords.
+# generate_password_hash(raw_password): takes a plaintext password and returns a salted hash string (algo + iterations + salt + hash). 
+# By default it’s pbkdf2:sha256 with a per-password random salt and plenty of iterations.
+# check_password_hash(stored_hash, candidate_password): safely verifies a 
+# login attempt by hashing the candidate and comparing (in a timing-safe way) to the stored hash.
 from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(db.Model):
@@ -19,6 +23,7 @@ class User(db.Model):
     def check_password(self, raw: str) -> bool:
         return check_password_hash(self.password_hash, raw)
 
+    # converts a model instance into a plain Python dictionary ready to be JSON-serialized and returned by the API
     def to_dict(self):
         return {"id": self.id, "email": self.email, "created_at": self.created_at.isoformat()}
 

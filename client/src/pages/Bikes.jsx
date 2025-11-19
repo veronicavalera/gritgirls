@@ -11,7 +11,6 @@ function fullUrl(u) {
 
 export default function Bikes() {
   const { userEmail } = useAuth();
-
   const [bikes, setBikes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");

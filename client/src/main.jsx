@@ -1,3 +1,8 @@
+/*  boots React app, wires up routing, and wraps everything in auth.
+it’s the single place where we: 
+(1) choose which component renders for each URL, 
+(2) provide global providers (auth), and 
+(3) start the React app. */
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";

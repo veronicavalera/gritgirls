@@ -1,3 +1,4 @@
+/* WHAT: global foundation for styling 
 /* ===== GritGirls Light Theme ===== */
 
 /* 1) Color system & spacing */
@@ -48,6 +49,10 @@ a { color: inherit; }
   grid-template-rows: auto 1fr auto;
 }
 
+/* used chatGPT to help with some UI details 
+The header is relative until you scroll it to top: 0, then it “sticks” there as if it were fixed.
+When the header is on top, we want it above other content (cards, images). z-index controls the stacking order. 
+back drop filter: blurs/saturates what’s behind the header, giving a frosted-glass feel as you scroll content underneath.*/
 .header {
   position: sticky;
   top: 0;

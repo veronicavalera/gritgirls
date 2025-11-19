@@ -1,6 +1,7 @@
 from . import db
 from .models import Bike
 
+# was for testing- will remove
 def seed():
     if Bike.query.count() == 0:
         db.session.add_all([
