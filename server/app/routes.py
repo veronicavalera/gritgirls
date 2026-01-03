@@ -5,37 +5,16 @@ from .models import Bike, Ride, UserProfile, RideAttendee, User
 from . import db
 import os
 import re
-# sources: https://www.geeksforgeeks.org/python/flask-app-routing/
-# https://medium.com/@sim30217/routes-in-flask-8c819797f9eb
-# https://testdriven.io/courses/learn-flask/routing/
-
-# Defines a Flask Blueprint called api_bp that mounts 
-# backend JSON API. All the URL routes like /bikes, /rides, /profile live here.
-# note to self: defines endpoints (/bikes, /rides, /profile) without wiring them directly to the main app.
-#   Then with create_app, every route defined in the blueprint 
-#   (e.g. "/bikes") becomes available at "/api/bikes" on the real server.
-#   Those routes return JSON (not HTML pages), so the React frontend can fetch(...) them
-# It uses JWT auth (@jwt_required) to protect routes that 
-# need a logged-in user and pulls the user id with get_jwt_identity().
-# Client pages call these routes with fetch
-
+from sqlalchemy import func
 
 # -----------------------------------------------------------------------------
 # Blueprint
 # -----------------------------------------------------------------------------
-# A Blueprint is a modular bundle of routes. We register this Blueprint under
-# the prefix "/api" in create_app(), so a function declared here at "/bikes"
-# will be served at "/api/bikes".
 api_bp = Blueprint("api", __name__)
 
 # ---------------------------
 # Basic health
 # ---------------------------
-# note: needed help getting started with routing, so 
-# had chatgpt help with these original endpoints (syntax) 
-# this 
-
-# confirms the app is running and reachable—without touching the database or any heavy logic
 @api_bp.get("/health")
 def health():
     return jsonify({"ok": True})
@@ -318,6 +297,83 @@ def delete_bike(bike_id: int):
     return jsonify({"ok": True}), 200
 
 # -----------------------------------------------------------------------------
+# Rider directory (NEW)
+# -----------------------------------------------------------------------------
+@api_bp.get("/riders")
+@jwt_required()
+def rider_directory():
+    """
+    Directory from UserProfile joined to User.
+    Filter by:
+      - ?state=NJ
+      - ?level=Beginner|Intermediate|Advanced
+      - ?q= (search email or zip prefix)
+
+    Returns:
+      { total, results: [{ first_name, email, zip_prefix, state, experience_level }] }
+    """
+    state = (request.args.get("state") or "").strip().upper()[:2]
+    level = (request.args.get("level") or "").strip()
+    q = (request.args.get("q") or "").strip()
+
+    # pagination
+    try:
+        limit = min(int(request.args.get("limit", 50)), 200)
+    except ValueError:
+        limit = 50
+    try:
+        offset = max(int(request.args.get("offset", 0)), 0)
+    except ValueError:
+        offset = 0
+
+    query = (
+        db.session.query(UserProfile, User)
+        .join(User, User.id == UserProfile.user_id)
+    )
+
+    if state:
+        query = query.filter(func.upper(UserProfile.state) == state)
+
+    if level:
+        query = query.filter(UserProfile.experience_level == level)
+
+    if q:
+        like = f"%{q.lower()}%"
+        query = query.filter(
+            db.or_(
+                func.lower(User.email).like(like),
+                func.lower(UserProfile.zip_prefix).like(like),
+            )
+        )
+
+    total = query.count()
+
+    rows = (
+        query.order_by(User.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
+
+    results = []
+    for prof, user in rows:
+        # You don't currently store first_name; use email prefix for demo.
+        first_name = (user.email.split("@")[0] if user.email else "")
+        results.append(
+            dict(
+                user_id=user.id,
+                first_name=first_name,
+                email=user.email,
+                zip_prefix=prof.zip_prefix,
+                state=prof.state,
+                experience_level=prof.experience_level,
+                level=prof.experience_level,  # alias so frontends can use either key
+            )
+        )
+
+    return jsonify({"total": total, "results": results}), 200
+
+# -----------------------------------------------------------------------------
 # Rides
 # -----------------------------------------------------------------------------
 @api_bp.get("/rides/<int:ride_id>")
@@ -453,4 +509,4 @@ def update_profile():
     prof.contact_email = (data.get("contact_email") or "").strip() or None
 
     db.session.commit()
-    return jsonify(prof.to_dict())
+    return jsonify(prof.to_dict()), 200

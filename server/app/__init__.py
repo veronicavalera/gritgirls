@@ -1,69 +1,95 @@
-# Flask app factory- builds and wires the entire backend 
-# in one place so tests, dev, and prod can all create 
-# the same app instance cleanly.
-# sources: https://www.geeksforgeeks.org/python/what-is-__init__-py-file-in-python/
-
 # server/app/__init__.py
 from pathlib import Path
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from dotenv import load_dotenv  # <-- ADD
+from dotenv import load_dotenv
 import os
 
 # creates a global SQLAlchemy handle that will be bound to a Flask app later
 db = SQLAlchemy()
 
 def create_app():
-    # loads secrets from .env (Stripe keys, JWT secret, etc.) into os.environ. 
-    # This keeps secrets out of source code.
-    load_dotenv()  
+    # loads secrets from .env (Stripe keys, JWT secret, etc.) into os.environ.
+    load_dotenv()
 
-    # create Flask app instance 
     app = Flask(__name__)
 
-    # Absolute path to dev.db at the repo root
-    # Resolves the repo root and stores SQLite at gritgirls/dev.db
-    BASE_DIR = Path(__file__).resolve().parents[2]  # gritgirls/
-    DB_PATH = BASE_DIR / "dev.db"
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
+    # -------------------------------------------------------------------------
+    # DATABASE CONFIG
+    # -------------------------------------------------------------------------
+    # Priority:
+    #  1) DATABASE_URL (Render Postgres or any external DB)
+    #  2) SQLITE_PATH (Render disk path, e.g. /var/data/dev.db)
+    #  3) Local default dev.db at repo root
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    else:
+        sqlite_path = os.getenv("SQLITE_PATH")  # e.g. "/var/data/dev.db" on Render
+        if sqlite_path:
+            app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{sqlite_path}"
+        else:
+            BASE_DIR = Path(__file__).resolve().parents[2]  # gritgirls/
+            DB_PATH = BASE_DIR / "dev.db"
+            app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
+
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    # uploads dir 
-    UPLOAD_DIR = BASE_DIR / "uploads"
+    # -------------------------------------------------------------------------
+    # UPLOADS CONFIG (PERSISTENT DISK FRIENDLY)
+    # -------------------------------------------------------------------------
+    # Priority:
+    #  1) UPLOAD_DIR (Render disk path, e.g. /var/data/uploads)
+    #  2) Local default uploads/ at repo root
+    BASE_DIR = Path(__file__).resolve().parents[2]  # gritgirls/
+    uploads_root = os.getenv("UPLOAD_DIR")  # e.g. "/var/data/uploads"
+    if uploads_root:
+        UPLOAD_DIR = Path(uploads_root)
+    else:
+        UPLOAD_DIR = BASE_DIR / "uploads"
+
     UPLOAD_DIR.mkdir(exist_ok=True, parents=True)
     app.config["UPLOAD_DIR"] = str(UPLOAD_DIR)
 
-    # CORS (keep ports, including 5173/5174)
-    # Allows Vite dev server (localhost:5173) to call /api/*
+    # -------------------------------------------------------------------------
+    # CORS (LOCAL + PROD)
+    # -------------------------------------------------------------------------
+    frontend_origin = os.getenv("FRONTEND_ORIGIN")  # e.g. "https://your-site.onrender.com"
+
+    origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ]
+    if frontend_origin:
+        origins.append(frontend_origin)
+
     CORS(
         app,
         resources={
             r"/api/*": {
-                "origins": [
-                    "http://localhost:5173",
-                    "http://127.0.0.1:5173",
-                    "http://localhost:5174",
-                    "http://127.0.0.1:5174",
-                ],
+                "origins": origins,
                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
             }
         },
-        supports_credentials=False,  # must be here (top-level)
+        supports_credentials=False,
     )
 
-    # binds SQLAlchemy to this app instance
+    # -------------------------------------------------------------------------
+    # JWT
+    # -------------------------------------------------------------------------
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-insecure-change-me")
+    JWTManager(app)
+
+    # -------------------------------------------------------------------------
+    # DB + BLUEPRINTS
+    # -------------------------------------------------------------------------
     db.init_app(app)
 
-    # JWT secret (dev fallback if env not set)
-    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-insecure-change-me")
-    jwt = JWTManager(app)
-
-    # Imports models so SQLAlchemy knows the tables, 
-    # then db.create_all() creates tables (handy for dev/tests).
-    # blueprints for routes, uploads, payments, and auth api endpoints
     with app.app_context():
         from . import models
         db.create_all()
@@ -81,4 +107,3 @@ def create_app():
         app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
     return app
-

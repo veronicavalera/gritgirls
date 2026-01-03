@@ -15,6 +15,8 @@ import Bikes from "./pages/Bikes.jsx";
 import BikesNew from "./pages/BikesNew.jsx";
 import BikeDetail from "./pages/BikeDetail.jsx";
 import BikesEdit from "./pages/BikesEdit.jsx";
+import RiderDirectory from "./pages/RiderDirectory";
+
 
 // Rides
 import Rides from "./pages/Rides.jsx";
@@ -48,6 +50,7 @@ const router = createBrowserRouter([
       // Rides
       { path: "rides", element: <Rides /> },
       { path: "rides/new", element: <RidesNew /> },
+      {path: "/riders", element: <RiderDirectory /> },
 
       // Auth & Profile
       { path: "profile", element: <Profile /> },
